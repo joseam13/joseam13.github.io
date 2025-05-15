@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>About - Alejandro Maselli</title>
+
+  <link href="assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+  <link href="assets/lightbox/css/lightbox.css" rel="stylesheet">
+  <link href="assets/textrotator/simpletextrotator.css" rel="stylesheet">
+  <link href="assets/flexslider/flexslider.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/animate.css" rel="stylesheet">
+  <link href="img/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+
+</head>
+
+<body id="top">
+
+  <div id="preloader"></div>
+  <header id="home">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="menu-wrap">
+          <nav class="menu">
+            <div class="icon-list">
+              <a href="index.html"><i class="fa fa-fw fa-home"></i><span>Home</span></a>
+              <a href="about.html"><i class="fa fa-fw fa-quote-left"></i><span>About</span></a>
+              <a href="index.html#service"><i class="fa fa-fw fa-globe"></i><span>Service</span></a>
+              <a href="index.html#portfolio"><i class="fa fa-fw fa-picture-o"></i><span>Portfolio</span></a>
+              <a href="index.html#blog"><i class="fa fa-fw fa-rss"></i><span>Blog</span></a>
+              <a href="index.html#contact"><i class="fa fa-fw fa-envelope-o"></i><span>Contact</span></a>
+            </div>
+          </nav>
+        </div>
+        <button class="menu-button" id="open-button"></button>
+      </div>
+    </div>
+  </header>
+
+  <section class="intro text-center section-padding color-bg" id="about">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-8 col-md-offset-2 wp1">
+          <h1 class="arrow">NY Yellow Taxi Data Analytics With <span>Databricks</span></h1>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <div class="container-fluid">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-8 col-md-offset-2 wp1" style="margin:0">
+          <h2 style="text-justify: justified;font-weight: bold;">This is a data analysis project about New York Yellow taxi trips data that retrieves data from the following website, covering all extract, transform, and load (ETL) processes using Databricks as the main data engineering platform.
+          </h2>
+          <h3>I decided to implement the medallion architecture</h3>
+          <img style="width: 100%;" src="img/project1/building-data-pipelines-with-delta-lake-120823.png" alt="">
+          <h3>I decided to configure an autoloader to process the data as it arrives to the Databricks Volume</h3>
+          <img src="img/project1/1_Umw0s5HyfJy5wzOeDyqiHQ.png" alt="">
+
+          <h2>The first steps will be:</h2>
+          <ol>
+            <li>
+              <h3>Scrape the download links</h3>
+            </li>
+            <li>
+              <h3>Store Them in a pandas dataframe</h3>
+            </li>
+            <li>
+              <h3>Convert the dataframe to CSV</h3>
+            </li>
+          </ol>
+          <img src="img/project1/diagram0.png" style="width: 100%" />
+          <pre><code>
+import requests
+from bs4 import BeautifulSoup
+import re
+import pandas as pd
+
+url = "https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
+
+response = requests.get(url)
+
+links = []
+
+if response.status_code == 200:
+    # Parse the HTML content
+    soup = BeautifulSoup(response.text, "html.parser")
+    
+    # Find and print the title
+    title_tag = soup.find_all("a")
+    links.append('url')
+    for link in title_tag:
+        if re.search(r'yellow',link.get('href')):
+            links.append(link.get('href'))
+            
+    df = pd.DataFrame(links)
+    df.to_csv('yellow.csv')
+    print(df)
+
+else:
+    print(f"Request failed with status code: {response.status_code}")
+
+  </code></pre>
+
+  <h3>Create the schema for bronze</h3>
+
+  <pre><code>%sql
+
+CREATE SCHEMA IF NOT EXISTS yellow_taxi_bronze
+COMMENT 'Schema for raw data ingestion (Bronze Layer)';</code>
+          </pre>
+<h3>Create the volume for initial ingestion</h3>
+<pre><code>%sql
+
+CREATE VOLUME yellow_taxi_bronze.raw_volume;</code>
+</pre>
+<h3>Create the volume for the autoloader checkpoint</h3>
+<pre><code>%sql
+
+CREATE VOLUME yellow_taxi_bronze.checkpoint_volume;</code>
+</pre>
+
+<h3>Create our autoloader</h3>
+<pre><code>(spark.readStream
+      .format("cloudFiles")
+      .option("cloudFiles.format", "parquet")
+      .option("cloudFiles.schemaLocation", schema_path)
+      .option("cloudFiles.inferColumnTypes", "true")
+      .load(volume_path)
+      .withColumn("_bronze_load_timestamp", current_timestamp())
+      .withColumn("_bronze_source_file", col("_metadata.file_path"))
+      .writeStream
+      .option("checkpointLocation", checkpoint_path)
+      .option("mergeSchema", "true")
+      .trigger(availableNow=True)
+      .toTable(bronze_table_name)
+  )</pre>
+  <h3>Have the table already created with the schema inferred</h3>
+  <img src="img/project1/SCR-20250513-qshk.png" alt="">
+  <h3>Loaded some parquets into the volume</h3>
+  <img src="img/project1/SCR-20250513-rgel.png" alt="">
+  <h3>Getting data ingested already</h3>
+  <img style="width: 100%" src="img/project1/SCR-20250513-rgul.png" alt="">
+  <h3>Applied dimensional modeling got this table structure</h3>
+  <img style="width: 150%;" src="img/project1/SCR-20250514-nohz.png" alt="">
+  <h3>On the silver layer created the date dimension table</h3>
+  <pre><code>%sql
+create volume yellow_taxi.datetime_dim
+  </code></pre>
+  <h3>Created the checkpoint</h3>
+  <pre><code>%sql
+
+create table yellow_taxi_silver.checkpoint_datetime_dim</code></pre>
+<h3>Configured the autoloader for the date dimension tables</h3>
+<pre><code>
+  from pyspark.sql.functions import hour, dayofmonth, month, year, dayofweek, monotonically_increasing_id, col
+  
+  bronze_table = "yellow_taxi_bronze.taxi_data_raw"
+  silver_datetime_table = "yellow_taxi_silver.datetime_dim"
+  checkpoint_path_silver_datetime = "/yellow_taxi_silver/checkpoint_datetime_dim"
+  
+  bronze_df_stream = spark.readStream.table(bronze_table)
+  
+  datetime_dim_stream = bronze_df_stream.select(
+      col("tpep_pickup_datetime"),
+      hour(col("tpep_pickup_datetime")).alias("pick_hour"),
+      dayofmonth(col("tpep_pickup_datetime")).alias("pick_day"),
+      month(col("tpep_pickup_datetime")).alias("pick_month"),
+      year(col("tpep_pickup_datetime")).alias("pick_year"),
+      dayofweek(col("tpep_pickup_datetime")).alias("pick_weekday"),
+      col("tpep_dropoff_datetime"),
+      hour(col("tpep_dropoff_datetime")).alias("drop_hour"),
+      dayofmonth(col("tpep_dropoff_datetime")).alias("drop_day"),
+      month(col("tpep_dropoff_datetime")).alias("drop_month"),
+      year(col("tpep_dropoff_datetime")).alias("drop_year"),
+      dayofweek(col("tpep_dropoff_datetime")).alias("drop_weekday"),
+      monotonically_increasing_id().alias("datetime_id")
+  ).select(
+      "datetime_id",
+      "tpep_pickup_datetime",
+      "pick_hour",
+      "pick_day",
+      "pick_month",
+      "pick_year",
+      "pick_weekday",
+      "tpep_dropoff_datetime",
+      "drop_hour",
+      "drop_day",
+      "drop_month",
+      "drop_year",
+      "drop_weekday"
+  )
+  
+  (datetime_dim_stream.writeStream
+      .outputMode("append")
+      .format("delta")
+      .option("checkpointLocation", checkpoint_path_silver_datetime)
+      .trigger(availableNow=True)
+          .toTable(silver_datetime_table)
+  )</code></pre>
+  <h3>Having the date dimension table with its volumes</h3>
+  <img src="img/project1/SCR-20250514-ondl.png" alt="">
+  <h3>Now let's apply the same transformation for the rest of dimensions</h3>
+  <h3>Passenger count dimension</h3>
+  <pre><code>
+    %python
+from pyspark.sql.functions import col, expr, hash
+
+bronze_table = "cloudbricks_ai.yellow_taxi_bronze.taxi_data_raw"
+silver_passenger_count_table = "cloudbricks_ai.yellow_taxi_silver.passenger_count_dim"
+silver_trip_distance_table = "cloudbricks_ai.yellow_taxi_silver.trip_distance_dim"
+checkpoint_path_passenger_count = "/Volumes/cloudbricks_ai/yellow_taxi_silver/checkpoint_passenger_count_dim"
+checkpoint_path_trip_distance = "/Volumes/cloudbricks_ai/yellow_taxi_silver/checkpoint_trip_distance_dim"
+
+bronze_df_stream = spark.readStream.table(bronze_table)
+
+passenger_count_dim_stream = bronze_df_stream.select("passenger_count").distinct()
+passenger_count_dim_stream = passenger_count_dim_stream.withColumn(
+    "passenger_count_id", 
+    hash(col("passenger_count"))
+)
+display(passenger_count_dim_stream)
+
+passenger_count_dim_stream = passenger_count_dim_stream.select("passenger_count_id", "passenger_count")
+
+(passenger_count_dim_stream.writeStream
+    .outputMode("append")
+    .format("delta")
+    .option("checkpointLocation", checkpoint_path_passenger_count)
+    .trigger(availableNow=True)
+    .toTable(silver_passenger_count_table)
+)
+
+  </code></pre>
+  <h3>Trip distance</h3>
+  <pre><code>
+    trip_distance_dim_stream = bronze_df_stream.select("trip_distance").distinct()
+    trip_distance_dim_stream = trip_distance_dim_stream.withColumn(
+        "trip_distance_id", 
+        hash(col("trip_distance"))
+    )
+    trip_distance_dim_stream = trip_distance_dim_stream.select("trip_distance_id", "trip_distance")
+    
+    (trip_distance_dim_stream.writeStream
+        .outputMode("append")
+        .format("delta")
+        .option("checkpointLocation", checkpoint_path_trip_distance)
+        .trigger(availableNow=True)
+        .toTable(silver_trip_distance_table)
+    )</code></pre>
+    <h3>Rate code dimension</h3>
+  <pre><code>%python
+    from pyspark.sql.functions import col, create_map, lit, concat_ws, expr
+    
+    bronze_table = "cloudbricks_ai.yellow_taxi_bronze.taxi_data_raw"
+    silver_rate_code_table = "cloudbricks_ai.yellow_taxi_silver.rate_code_dim"
+    checkpoint_path_rate_code = "/Volumes/cloudbricks_ai/yellow_taxi_silver/checkpoint_rate_code_dim"
+    
+    bronze_df_stream = spark.readStream.table(bronze_table)
+    
+    rate_code_type_map = create_map(
+        lit(1), lit("Standard rate"),
+        lit(2), lit("JFK"),
+        lit(3), lit("Newark"),
+        lit(4), lit("Nassau or Westchester"),
+        lit(5), lit("Negotiated fare"),
+        lit(6), lit("Group ride")
+    )
+    
+    rate_code_dim_stream = bronze_df_stream.select("RatecodeID").distinct()
+    rate_code_dim_stream = rate_code_dim_stream.withColumn(
+        "rate_code_id", 
+        expr("try_cast(RatecodeID as BIGINT)")
+    )
+    rate_code_dim_stream = rate_code_dim_stream.withColumn("rate_code_name", rate_code_type_map[col("RatecodeID")])
+    rate_code_dim_stream = rate_code_dim_stream.select("rate_code_id", "RatecodeID", "rate_code_name")
+    
+    (rate_code_dim_stream.writeStream
+        .outputMode("append")
+        .format("delta")
+        .option("checkpointLocation", checkpoint_path_rate_code)
+        .trigger(availableNow=True)
+        .toTable(silver_rate_code_table)
+    )</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12 text-center">
+          <p>All Rights Reserved. &copy; 2024 Alejandro Maselli</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- jQuery -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  <!-- SmoothScroll -->
+  <script type="text/javascript" src="assets/smoothscroll/smoothscroll.js"></script>
+  <!-- Bootstrap -->
+  <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+  <!-- Waypoints -->
+  <script src="js/waypoints.min.js"></script>
+  <!-- classie.js -->
+  <script src="js/classie.js"></script>
+  <!-- FlexSlider -->
+  <script src="assets/flexslider/jquery.flexslider.js"></script>
+  <!-- Modernizr -->
+  <script src="js/modernizr.js"></script>
+  <!-- Text Rotator -->
+  <script src="assets/textrotator/jquery.simple-text-rotator.js"></script>
+  <!-- Lightbox.js -->
+  <script src="assets/lightbox/js/lightbox.min.js"></script>
+  <!-- Theme JavaScript Core -->
+  <script src="js/main.js"></script>
+  <script src="js/script.js"></script>
+</body>
+
+</html>
