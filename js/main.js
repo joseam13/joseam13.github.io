@@ -2,13 +2,6 @@ $(window).load(function(){
 	$('#preloader').fadeOut('slow',function(){$(this).remove();});
 });
 
-window.elasticAnalytics.createTracker({
-  endpoint: "https://77561m8ivn1olhs5fczpls0xa85bueqt.us-west2.gcp.elastic-cloud.com:443",
-  collectionName: "my-collection",
-  apiKey: "########",
-  // Optional: sampling rate percentage: 0-1, 0 = no events, 1 = all events
-  // sampling: 1,
-});
 
 
 /******************************************************************************************************************************
